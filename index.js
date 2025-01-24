@@ -1,106 +1,108 @@
 import * as THREE from "three";
-import { OrbitControls } from 'jsm/controls/OrbitControls.js';
+import { OrbitControls } from "jsm/controls/OrbitControls.js";
 
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
-camera.position.z = 15;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+camera.position.z = 10;
+const renderer = new THREE.WebGLRenderer();
 renderer.setSize(w, h);
 document.body.appendChild(renderer.domElement);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
 const sceneCube = new THREE.Object3D();
 scene.add(sceneCube);
+
 // giantCube as background
 const cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-const map = new THREE.TextureLoader().load(
-  "./assets/p5-noise.png"
-);
-const cubeMat = new THREE.MeshBasicMaterial({
-  map,
-  side: THREE.BackSide
+cubeGeo.scale(-1, 1, 1);
+// shader mat:
+const vsh = await fetch('./assets/vert.glsl');
+const fsh = await fetch('./assets/frag.glsl');
+
+const uniforms = {
+  time: { value: 0.0 },
+  resolution: { value: new THREE.Vector2(w, h) },
+};
+
+const material = new THREE.ShaderMaterial({
+  uniforms,
+  vertexShader: await vsh.text(),
+  fragmentShader: await fsh.text()
 });
-const cube = new THREE.Mesh(cubeGeo, cubeMat);
+
+const cube = new THREE.Mesh(cubeGeo, material);
 sceneCube.add(cube);
 
 // Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 0);
-controls.update();
+controls.enableDamping = true;
 
-// helper
-function getRandomPosition(range) {
-  const x = Math.random() * range - range * 0.5;
-  const y = Math.random() * range - range * 0.5;
-  const z = Math.random() * range - range * 0.5;
-  return {x, y, z};
-}
-function getObj() {
-  const range = 20;
-  let prob = Math.random();
-  const objGeo = prob < 0.33 ? 
-    THREE.SphereGeometry : prob > 0.66 ?
-    THREE.BoxGeometry :
-    THREE.IcosahedronGeometry;
-  const geometry = new objGeo();
+function getBall() {
+  const geometry = new THREE.SphereGeometry();
   const material = new THREE.MeshPhysicalMaterial({
-    roughness: Math.random() < 0.05 ? 0.2 : 0.0,
-    transmission: 1.0,
-    thickness: Math.random() < 0.05 ? 2.0 : 1.0,
-    flatShading: false, 
+    roughness: 0,
+    transmission: 1,
+    thickness: 0.9,
+    transparent: true,
+  });
+  const ball = new THREE.Mesh(geometry, material);
+  const x = Math.random() * 30 - 15;
+  const y = Math.random() * 30 - 15;
+  const z = Math.random() * 30 - 15;
+  ball.position.set(x, y, z);
+  return ball;
+}
+const palette = [0x03071e, 0x370617, 0x6a040f, 0x9d0208, 0xd00000, 0xdc2f02, 0xe85d04, 0xf48c06, 0xfaa307, 0xffba08];
+function getBox() {
+  const hex = palette[Math.floor(Math.random() * palette.length)];
+  const color = new THREE.Color(Math.random() * 0xffffff);
+  const geometry = new THREE.BoxGeometry();
+  const material = new THREE.MeshPhysicalMaterial({
+    roughness: 0.0,
+    transmission: 1,
+    thickness: 5,
+    transparent: true,
+    color,
   });
   const mesh = new THREE.Mesh(geometry, material);
-  const scaleScalar = Math.random() + 1.5;
-  mesh.scale.set(scaleScalar, scaleScalar, scaleScalar);
-  const { x, y, z } = getRandomPosition(range);
-  let goalPos = { x, y, z };
+  mesh.scale.set(3, 3, 3);
+  const x = Math.random() * 30 - 15;
+  const y = Math.random() * 30 - 15;
+  const z = Math.random() * 30 - 15;
   mesh.position.set(x, y, z);
-  let needsNewGoalPos = false;
-  const moveRate = 0.02;
-  const rotationRate = {
-    x: (Math.random() - 0.5) * 0.02,
-    y: (Math.random() - 0.5) * 0.02,
-    z: (Math.random() - 0.5) * 0.02
-  };
-  function update () {
-    needsNewGoalPos = Math.random() < 0.001;
-    if (needsNewGoalPos) {
-      goalPos = getRandomPosition(range);
-    }
-    mesh.rotation.x += rotationRate.x;
-    mesh.rotation.y += rotationRate.y;
-    mesh.rotation.z += rotationRate.z;
-    mesh.position.x -= (mesh.position.x - goalPos.x) * moveRate;
-    mesh.position.y -= (mesh.position.y - goalPos.y) * moveRate;
-    mesh.position.z -= (mesh.position.z - goalPos.z) * moveRate;
-  }
-  return {mesh, update};
+  return mesh;
 }
-
 
 let obj;
-const sceneObjects = [];
-const numObjs = 40;
+const numObjs = 200;
 for (let i = 0; i < numObjs; i += 1) {
-  obj = getObj();
-  sceneObjects.push(obj);
-  sceneCube.add(obj.mesh);
+  obj = getBox();
+  sceneCube.add(obj);
 }
 
-const sunlight = new THREE.DirectionalLight(0xffffff);
+const sunlight = new THREE.DirectionalLight(0xffffff, 2.0);
 sunlight.position.y = 2;
-scene.add(sunlight);
+// scene.add(sunlight);
 
-
-function animate() {
+function animate(t = 0) {
+  t *= 0.001;
   requestAnimationFrame(animate);
-  sceneObjects.forEach( o => o.update());
-  sceneCube.rotation.x += 0.0005;
-  sceneCube.rotation.y += 0.001;
+  sceneCube.rotation.x += 0.001;
+  sceneCube.rotation.y += 0.002;
+  uniforms.resolution.value.set(renderer.domElement.width, renderer.domElement.height);
+  uniforms.time.value = t;
   renderer.render(scene, camera);
+  controls.update();
 }
 
 animate();
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}); 
+
+// TODO 2025:
+// implement a camera path to fly through the scene
