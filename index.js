@@ -1,13 +1,6 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.131/build/three.module.js";
-import { EffectComposer } from "https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { AfterimagePass } from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/postprocessing/AfterimagePass.js';
+import * as THREE from "three";
+import { OrbitControls } from 'jsm/controls/OrbitControls.js';
 
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.118/examples/jsm/controls/OrbitControls.js';
-
-console.log(`THREE REVISION: %c${THREE.REVISION}`, "color: #FFFF00");
-window.THREE = THREE;
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
@@ -16,18 +9,19 @@ camera.position.z = 15;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(w, h);
 document.body.appendChild(renderer.domElement);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
 const sceneCube = new THREE.Object3D();
 scene.add(sceneCube);
-
 // giantCube as background
 const cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-cubeGeo.scale(-1, 1, 1);
 const map = new THREE.TextureLoader().load(
   "./assets/p5-noise.png"
 );
 const cubeMat = new THREE.MeshBasicMaterial({
   map,
+  side: THREE.BackSide
 });
 const cube = new THREE.Mesh(cubeGeo, cubeMat);
 sceneCube.add(cube);
@@ -100,9 +94,6 @@ const sunlight = new THREE.DirectionalLight(0xffffff);
 sunlight.position.y = 2;
 scene.add(sunlight);
 
-// const filllight = new THREE.DirectionalLight(0xffffff, 1000);
-// filllight.position.x = -2;
-// scene.add(filllight);
 
 function animate() {
   requestAnimationFrame(animate);
