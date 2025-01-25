@@ -1,90 +1,53 @@
 import * as THREE from "three";
-import { OrbitControls } from "jsm/controls/OrbitControls.js";
-
+import getLayer from "./assets/getLayer.js";
+import { OrbitControls } from 'jsm/controls/OrbitControls.js';
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
-camera.position.z = 10;
-const renderer = new THREE.WebGLRenderer();
+camera.position.z = 5;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(w, h);
 document.body.appendChild(renderer.domElement);
 
-// Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-const sceneGroup = new THREE.Group();
-sceneGroup.userData.update = () => {
-  sceneGroup.rotation.x += 0.001;
-  sceneGroup.rotation.y += 0.002;
-};
-scene.add(sceneGroup);
-
-const cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-const vsh = await fetch('./assets/vert.glsl');
-const fsh = await fetch('./assets/frag.glsl');
-const bgMat = new THREE.ShaderMaterial({
-  vertexShader: await vsh.text(),
-  fragmentShader: await fsh.text(),
-  side: THREE.BackSide,
+const geometry = new THREE.BoxGeometry();
+const material = new THREE.MeshStandardMaterial({
+  color: 0xffff00,
 });
+const cube = new THREE.Mesh(geometry, material);
+scene.add(cube);
 
-const bgCube = new THREE.Mesh(cubeGeo, bgMat);
-sceneGroup.add(bgCube);
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
+scene.add(hemiLight);
 
-function getBall() {
-  const geometry = new THREE.SphereGeometry();
-  const material = new THREE.MeshPhysicalMaterial({
-    roughness: 0,
-    transmission: 1,
-    thickness: 0.9,
-    transparent: true,
-  });
-  const ball = new THREE.Mesh(geometry, material);
-  const x = Math.random() * 30 - 15;
-  const y = Math.random() * 30 - 15;
-  const z = Math.random() * 30 - 15;
-  ball.position.set(x, y, z);
-  return ball;
-}
-
-function getBox() {
-  const color = new THREE.Color(Math.random() * 0xffffff);
-  const geometry = new THREE.BoxGeometry();
-  const material = new THREE.MeshPhysicalMaterial({
-    roughness: 0.0,
-    transmission: 1,
-    thickness: 5,
-    transparent: true,
-    color,
-  });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.scale.set(3, 3, 3);
-  const x = Math.random() * 30 - 15;
-  const y = Math.random() * 30 - 15;
-  const z = Math.random() * 30 - 15;
-  mesh.position.set(x, y, z);
-  return mesh;
-}
-
-let obj;
-const numObjs = 200;
-for (let i = 0; i < numObjs; i += 1) {
-  obj = getBox();
-  sceneGroup.add(obj);
-}
+// Sprites BG
+const gradientBackground = getLayer({
+  hue: 0.6,
+  numSprites: 8,
+  opacity: 0.2,
+  radius: 10,
+  size: 24,
+  z: -10.5,
+});
+scene.add(gradientBackground);
 
 function animate() {
   requestAnimationFrame(animate);
-  sceneGroup.userData.update();
+
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.02;
   renderer.render(scene, camera);
   controls.update();
 }
+
 animate();
 
-window.addEventListener("resize", () => {
+function handleWindowResize () {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-}); 
+}
+window.addEventListener('resize', handleWindowResize, false);
